@@ -29,14 +29,16 @@ data <- content(out, as = "text") %>%
 
 issues <- data$issues
 
-names(data)
-issues$fields
-
-tibble::tibble(
-  name = issues$key,
-  summary = issues$fields$summary,
-  created = issues$fields$created,
-  updated = issues$fields$updated  
+DT::datatable(
+  escape = FALSE,
+  tibble::tibble(
+    name = issues$key,
+    summary = issues$fields$summary,
+    created = issues$fields$created,
+    updated = issues$fields$updated  
+  ) %>%
+    mutate(name = paste0("<a href='https://issues.apache.org/jira/browse/",name,"' target='_blank'>", name , "</a>"))
 )
+
 
 ```
