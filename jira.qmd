@@ -1,0 +1,42 @@
+---
+title: "Apache Arrow R JIRA Tickets"
+format:
+  html:
+    page-layout: full
+---
+
+```{r}
+#| label: load-packages-and-code
+#| include: false
+library(httr)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+library(DT)
+library(rlang)
+```
+
+```{r}
+library(httr)
+library(dplyr)
+library(jsonlite)
+
+query <- URLencode('https://issues.apache.org/jira/rest/api/2/search?jql=project = ARROW AND resolution = Unresolved AND summary ~ "\\\\[R\\\\]" AND reporter not in (jonkeane, npr, dragosmg, thisisnic, willjones127, paleolimbot, assignUser, icook) ORDER BY created DESC, priority DESC, updated DESC')
+
+out <- GET(query)
+data <- content(out, as = "text") %>%
+  jsonlite::fromJSON()
+
+issues <- data$issues
+
+names(data)
+issues$fields
+
+tibble::tibble(
+  name = issues$key,
+  summary = issues$fields$summary,
+  created = issues$fields$created,
+  updated = issues$fields$updated  
+)
+
+```
