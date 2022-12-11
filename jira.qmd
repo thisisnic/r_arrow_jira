@@ -12,33 +12,122 @@ library(httr)
 library(dplyr)
 library(lubridate)
 library(tidyr)
-library(DT)
+library(gt)
 library(rlang)
-```
-
-```{r}
 library(httr)
 library(dplyr)
 library(jsonlite)
 
-query <- URLencode('https://issues.apache.org/jira/rest/api/2/search?jql=project = ARROW AND resolution = Unresolved AND summary ~ "\\\\[R\\\\]" AND reporter not in (jonkeane, npr, dragosmg, thisisnic, willjones127, paleolimbot, assignUser, icook) ORDER BY created DESC, priority DESC, updated DESC')
-
-out <- GET(query)
-data <- content(out, as = "text") %>%
-  jsonlite::fromJSON()
-
-issues <- data$issues
-
-DT::datatable(
-  escape = FALSE,
+extract_issues <- function(jql){
+  
+  query <- paste("https://issues.apache.org/jira/rest/api/2/search?jql=", jql, collapse = "")
+  
+  out <- GET(URLencode(query))
+  data <- content(out, as = "text") %>%
+    jsonlite::fromJSON()
+  
+  issues <- data$issues
+  
   tibble::tibble(
     name = issues$key,
     summary = issues$fields$summary,
-    created = issues$fields$created,
-    updated = issues$fields$updated  
+    created = strptime(ymd_hms(issues$fields$created), "%F %T"),
+    updated = strptime(ymd_hms(issues$fields$updated), "%F %T")  
   ) %>%
     mutate(name = paste0("<a href='https://issues.apache.org/jira/browse/",name,"' target='_blank'>", name , "</a>"))
-)
+}
 
+show_gt <- function(table){
+  gt(extract_issues(table)) %>%
+    fmt_markdown(columns = c(name))
+}
 
 ```
+
+
+::: {.panel-tabset}
+
+### All R Tickets
+
+All Arrow R tickets.
+
+```{r}
+#| echo: false
+jql_all <- 'project = ARROW AND resolution = Unresolved AND summary ~ "\\\\[R\\\\]" ORDER BY created DESC, priority DESC, updated DESC'
+```
+
+JQL query: `r jql_all`
+
+```{r}
+#| echo: false
+
+show_gt(jql_all)
+```
+
+### Possibly External Tickets
+
+All Arrow R tickets not by core devs (this list subject to change, may be others to exclude).
+
+```{r}
+#| echo: false
+jql_external <- 'project = ARROW AND resolution = Unresolved AND summary ~ "\\\\[R\\\\]" AND reporter not in (jonkeane, npr, dragosmg, thisisnic, willjones127, paleolimbot, assignUser, icook, jorisvandenbossche, stephhazlitt) ORDER BY created DESC, priority DESC, updated DESC'
+```
+
+JQL query: `r jql_external`
+
+```{r}
+#| echo: false
+
+show_gt(jql_external)
+```
+
+### Untriaged
+
+All Arrow R tickets not by core devs with no comments.
+
+```{r}
+#| echo: false
+jql_uncommented <- 'project = ARROW AND issuetype in (Bug, Improvement, "New Feature") AND status = Open AND component in (R) AND reporter not in (jonkeane, npr, dragosmg, thisisnic, willjones127, paleolimbot, assignUser, icook, jorisvandenbossche, stephhazlitt) AND assignee in (EMPTY) AND issueFunction in hasComments(0) ORDER  BY created DESC'
+```
+
+JQL query: `r jql_uncommented`
+
+```{r}
+#| echo: false
+show_gt(jql_uncommented)
+
+```
+
+### Untriaged - all reporters
+
+All Arrow R tickets with no comments.
+
+```{r}
+#| echo: false
+jql_uncommented_all <- 'project = ARROW AND issuetype in (Bug, Improvement, "New Feature") AND status = Open AND component in (R) AND assignee in (EMPTY) AND issueFunction in hasComments(0) ORDER  BY created DESC'
+```
+
+JQL query: `r jql_uncommented_all`
+
+```{r}
+#| echo: false
+show_gt(jql_uncommented_all)
+```
+
+### Maintenance Backlog
+
+All Arrow R tickets marked as bugs which are unresolved.
+
+```{r}
+#| echo: false
+jql_bugs <- 'project = ARROW AND (component = R OR summary ~ "\\\\[R\\\\]") AND type = Bug AND status not in (Closed, Resolved) ORDER BY created DESC'
+```
+
+JQL query: `r jql_bugs`
+
+```{r}
+#| echo: false
+show_gt(jql_bugs)
+```
+
+:::
