@@ -44,6 +44,40 @@ show_gt <- function(table){
 
 ```
 
+```{r}
+#| include: false
+library(gh)
+
+extract_row <- function(issue){
+  url <- issue$html_url
+  tibble::tibble(
+    name = paste0("<a href='",issue$html_url,"' target='_blank'>", paste0("#", issue$number, collapse = "") , "</a>"),
+    summary = issue$title,
+    created = issue$created_at,
+    updated = issue$updated_at
+  ) 
+}
+
+build_issue_table <- function(arrow_issues){
+  r_issues <- arrow_issues[map_lgl(arrow_issues, is_r_issue)]
+  map(r_issues, extract_row) %>%
+    bind_rows()
+}
+
+is_pr <- function(issue){
+  !is.null(issue$pull_request)
+}
+
+is_r_issue <- function(issue){
+  !is_pr(issue) && "Component: R" %in% extract_labels(issue) 
+}
+
+extract_labels <- function(issue){
+  map_chr(issue$labels, ~.x[["name"]])
+}
+```
+
+
 
 ::: {.panel-tabset}
 
